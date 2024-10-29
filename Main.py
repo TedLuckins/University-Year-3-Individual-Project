@@ -151,7 +151,6 @@ Simulate_Attractor(
 
 # Rossler example from wiki - paparameters a=0.2, b=0.2, c=5.7
 
-# Rossler("Euler", [0., 1., 1.05], a=0.2, b=0.2, c=5.7, dt=0.01, num_steps=10000)
 """
 Simulate_Attractor(
     Integration_Methods["Euler"],
