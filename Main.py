@@ -1,3 +1,5 @@
+from cgitb import small
+
 import numpy as np
 from matplotlib import (pyplot as plt)
 
@@ -5,7 +7,7 @@ from matplotlib import (pyplot as plt)
 def Euler_Method(Deriv_Func, Initial_Conditions, num_steps, dt, *params):
     """
     :param Deriv_Func: function
-            The function the computes the deriviatives
+            The function that computes the derivatives
     :param Intital_Conditions: array-like, shape (3,)
             Initial values of the system (x, y, z)
     :param num_steps: int
@@ -30,7 +32,7 @@ def Euler_Method(Deriv_Func, Initial_Conditions, num_steps, dt, *params):
 def Runge_Kutta_Method(Deriv_Func, Initial_Conditions, num_steps, dt, *params):
     """
     :param Deriv_Func: function
-            The function the computes the deriviatives
+            The function that computes the derivatives
     :param Intital_Conditions: array-like, shape (3,)
             Initial values of the system (x, y, z)
     :param num_steps: int
@@ -113,7 +115,7 @@ Integration_Methods = {
     "Runge-Kutta" : Runge_Kutta_Method
 }
 
-def Simulate_Attractor(Integration_Func, Derivative_Func, Initial_Conditions, params, dt, num_steps, title):
+def Simulate_Attractor(Integration_Func, Deriv_Func, Initial_Conditions, params, dt, num_steps, title):
     """
    Simulate and plot the attractor.
     """
@@ -122,8 +124,22 @@ def Simulate_Attractor(Integration_Func, Derivative_Func, Initial_Conditions, pa
     #Plot results
     Plot_Attractor(xyzs, title)
 
+def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_steps, accuracy):
+    dt = max_dt
+    #point = np.array(Initial_Conditions)
+    while dt > 10**(-10):
+        small_dt = dt * 0.1
+        step = Integration_Func(Deriv_Func, Initial_Conditions, num_steps, dt, *params)[1]
+        small_step = Integration_Func(Deriv_Func, Initial_Conditions, 10 * num_steps, small_dt, *params)[1]
 
+        calc_accuracy = np.linalg.norm(step - small_step)
 
+        if calc_accuracy < accuracy:
+            return print("Optimal dt:", dt)
+        else:
+            dt = small_dt
+    print("Optimal dt was not found in limits")
+    return print("Best dt within limts:", dt)
 
 # Lorenz example from wiki - parameters s=10, r=28, b=2.667
 """
@@ -174,4 +190,12 @@ Simulate_Attractor(
 )
 """
 
-
+Op_dt(
+    Integration_Methods["Runge-Kutta"],
+    Rossler_Derivatives,
+    [0., 1., 1.05],
+    (0.1, 0.1, 14),
+    max_dt=0.01,
+    num_steps=10000,
+    accuracy = 10**(-6)
+)
