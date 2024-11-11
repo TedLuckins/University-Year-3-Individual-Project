@@ -120,14 +120,14 @@ def Simulate_Attractor(Integration_Func, Deriv_Func, Initial_Conditions, params,
    Simulate and plot the attractor.
     """
     #Calls specified functions and methods
-    xyzs = Integration_Func(Derivative_Func, Initial_Conditions, num_steps, dt, *params)
+    xyzs = Integration_Func(Deriv_Func, Initial_Conditions, num_steps, dt, *params)
     #Plot results
     Plot_Attractor(xyzs, title)
 
 def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_steps, accuracy):
     dt = max_dt
     #point = np.array(Initial_Conditions)
-    while dt > 10**(-10):
+    while dt > 10**(-12):
         small_dt = dt * 0.1
         step = Integration_Func(Deriv_Func, Initial_Conditions, num_steps, dt, *params)[1]
         small_step = Integration_Func(Deriv_Func, Initial_Conditions, 10 * num_steps, small_dt, *params)[1]
@@ -141,6 +141,16 @@ def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_
     print("Optimal dt was not found in limits")
     return print("Best dt within limts:", dt)
 
+Op_dt(
+    Integration_Methods["Runge-Kutta"],
+    Lorenz_Derivatives,
+    [0., 1., 1.05],
+    (0.1, 0.1, 14),
+    max_dt=0.01,
+    num_steps=1000,
+    accuracy = 10**(-4)
+)
+
 # Lorenz example from wiki - parameters s=10, r=28, b=2.667
 """
 Simulate_Attractor(
@@ -148,8 +158,8 @@ Simulate_Attractor(
     Lorenz_Derivatives,
     [0., 1., 1.05],
     (10, 28, 2.667),
-    dt=0.01,
-    num_steps=10000,
+    dt=10**(-4),
+    num_steps=1000000,
     title="Lorenz Attractor (Euler)"
 )
 """
@@ -159,8 +169,8 @@ Simulate_Attractor(
     Lorenz_Derivatives, 
     [0., 1., 1.05], 
     (10, 28, 2.667), 
-    dt=0.01, 
-    num_steps=10000,
+    dt=0.0001,
+    num_steps=1000000,
     title="Lorenz Attractor (Runge_Kutta)"
 )
 """
@@ -190,12 +200,4 @@ Simulate_Attractor(
 )
 """
 
-Op_dt(
-    Integration_Methods["Runge-Kutta"],
-    Rossler_Derivatives,
-    [0., 1., 1.05],
-    (0.1, 0.1, 14),
-    max_dt=0.01,
-    num_steps=10000,
-    accuracy = 10**(-6)
-)
+
