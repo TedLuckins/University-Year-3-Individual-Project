@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def Euler_Method(Deriv_Func, Initial_Conditions, num_steps, out_steps, dt, *params):
+def Euler_Method(Deriv_Func, xyz, dt, *params):
     """
     :param Deriv_Func: function
             The function that computes the derivatives
@@ -18,6 +18,8 @@ def Euler_Method(Deriv_Func, Initial_Conditions, num_steps, out_steps, dt, *para
             parameters of the system for derivation function
     :return: xyzs: ndarray, shape (num_steps + 1, 3)
             Array of (x, y, z) values at each time step
+    """
+    return xyz + Deriv_Func(xyz, *params) * dt
     """
     xyzs = np.empty((num_steps + 1, 3))
     xyzs[0] = Initial_Conditions
@@ -29,9 +31,10 @@ def Euler_Method(Deriv_Func, Initial_Conditions, num_steps, out_steps, dt, *para
         if i % (num_steps/out_steps) == 0:
             results.append(xyzs[i])
     return np.array(results)
+    """
 
 
-def Runge_Kutta_Method(Deriv_Func, Initial_Conditions, num_steps,out_steps , dt, *params):
+def Runge_Kutta_Method(Deriv_Func, xyz, dt, *params):
     """
     :param Deriv_Func: function
             The function that computes the derivatives
@@ -46,10 +49,16 @@ def Runge_Kutta_Method(Deriv_Func, Initial_Conditions, num_steps,out_steps , dt,
     :return: xyzs: ndarray, shape (num_steps + 1, 3)
             Array of (x, y, z) values at each time step
     """
+    k1 = Deriv_Func(xyz, *params)
+    k2 = Deriv_Func(xyz + 0.5 * k1 * dt, *params)
+    k3 = Deriv_Func(xyz + 0.5 * k2 * dt, *params)
+    k4 = Deriv_Func(xyz + k3 * dt, *params)
+    return xyz + (k1 + 2 * k2 + 2 * k3 + k4) * (dt / 6.0)
+    """
     xyzs = np.empty((num_steps + 1, 3))
     xyzs[0] = Initial_Conditions
     results = []
-
+    
     #Runge-Kutta integration loop
     for i in range(num_steps):
         k1 = Deriv_Func(xyzs[i], *params) #Computes the derivative at current point (using Euler method)
@@ -62,12 +71,12 @@ def Runge_Kutta_Method(Deriv_Func, Initial_Conditions, num_steps,out_steps , dt,
         if i % (num_steps / out_steps) == 0:
             results.append(xyzs[i])
     return np.array(results)
+    """
 
 def Plot_Attractor(xyzs, title):
     """
     A plotting function for attractors
     """
-
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
     ax.plot(*xyzs.T, lw=0.6)
@@ -120,14 +129,29 @@ Integration_Methods = {
     "Runge-Kutta" : Runge_Kutta_Method
 }
 
-def Simulate_Attractor(Integration_Func, Deriv_Func, Initial_Conditions, params, dt, num_steps, out_steps, title):
+def Simulate_Attractor(Step_Func, Deriv_Func, Initial_Conditions, params, dt, num_steps, out_steps, title):
     """
    Simulate and plot the attractor.
     """
+    xyz = np.array(Initial_Conditions)
+    results = [xyz]
+
+    for i in range(1, num_steps + 1):
+        xyz = Step_Func(Deriv_Func, xyz, dt, *params)
+
+        if i % (num_steps // out_steps) == 0 or i == num_steps:
+            results.append(xyz)
+
+    results = np.array(results)
+    #Plot results
+    Plot_Attractor(results, title)
+"""
+    results = np.array(results)
+    Plot_Attractor(results, title)
     #Calls specified functions and methods
     xyzs = Integration_Func(Deriv_Func, Initial_Conditions, num_steps, out_steps, dt, *params)
-    #Plot results
-    Plot_Attractor(xyzs, title)
+    """
+
 """
 def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_steps, accuracy):
     dt = max_dt
