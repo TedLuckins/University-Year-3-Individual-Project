@@ -1,9 +1,8 @@
-from cgitb import small
-
 import numpy as np
 import matplotlib.pyplot as plt
+from numba import njit
 
-
+@njit
 def Euler_Method(Deriv_Func, xyz, dt, *params):
     """
     :param Deriv_Func: function
@@ -20,20 +19,9 @@ def Euler_Method(Deriv_Func, xyz, dt, *params):
             Array of (x, y, z) values at each time step
     """
     return xyz + Deriv_Func(xyz, *params) * dt
-    """
-    xyzs = np.empty((num_steps + 1, 3))
-    xyzs[0] = Initial_Conditions
-    results = []
-
-    # Euler integration loop
-    for i in range(num_steps):
-        xyzs[i + 1] = xyzs[i] + Deriv_Func(xyzs[i], *params) * dt
-        if i % (num_steps/out_steps) == 0:
-            results.append(xyzs[i])
-    return np.array(results)
-    """
 
 
+@njit
 def Runge_Kutta_Method(Deriv_Func, xyz, dt, *params):
     """
     :param Deriv_Func: function
@@ -54,38 +42,9 @@ def Runge_Kutta_Method(Deriv_Func, xyz, dt, *params):
     k3 = Deriv_Func(xyz + 0.5 * k2 * dt, *params)
     k4 = Deriv_Func(xyz + k3 * dt, *params)
     return xyz + (k1 + 2 * k2 + 2 * k3 + k4) * (dt / 6.0)
-    """
-    xyzs = np.empty((num_steps + 1, 3))
-    xyzs[0] = Initial_Conditions
-    results = []
-    
-    #Runge-Kutta integration loop
-    for i in range(num_steps):
-        k1 = Deriv_Func(xyzs[i], *params) #Computes the derivative at current point (using Euler method)
-        k2 = Deriv_Func(xyzs[i]+ 0.5 * k1 * dt, *params) #Computes the derivative at the midpoint, using k1
-        k3 = Deriv_Func(xyzs[i]+ 0.5 * k2 * dt, *params) #COpmputes the derivative at another midpoint, using k2
-        k4 = Deriv_Func(xyzs[i] + k3 * dt, *params) #Computes the derivative at the endpoint, using k3
 
-        # Average the k increments with weight (1/6, 1/3, 1/3, 1/6) to update the solution
-        xyzs[i + 1] = xyzs[i] + (k1 + 2 * k2 + 2 * k3 + k4) * (dt / 6.0)
-        if i % (num_steps / out_steps) == 0:
-            results.append(xyzs[i])
-    return np.array(results)
-    """
 
-def Plot_Attractor(xyzs, title):
-    """
-    A plotting function for attractors
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.plot(*xyzs.T, lw=0.6)
-    ax.set_xlabel("X Axis")
-    ax.set_ylabel("Y Axis")
-    ax.set_zlabel("Z Axis")
-    ax.set_title(title)
-    plt.show()
-
+@njit
 def Lorenz_Derivatives(xyz, s, r, b):
     """
     Computes the Lorenz attractor derivatives
@@ -104,6 +63,7 @@ def Lorenz_Derivatives(xyz, s, r, b):
     z_dot = x * y - b * z
     return np.array([x_dot, y_dot, z_dot])
 
+@njit
 def Rossler_Derivatives(xyz, a, b, c):
     """
     Computes the Rossler attractor derivatives
@@ -123,34 +83,45 @@ def Rossler_Derivatives(xyz, a, b, c):
     z_dot = b + z * (x - c)
     return np.array([x_dot, y_dot, z_dot])
 
-#Dictionary
-Integration_Methods = {
-    "Euler" : Euler_Method,
-    "Runge-Kutta" : Runge_Kutta_Method
-}
-
-def Simulate_Attractor(Step_Func, Deriv_Func, Initial_Conditions, params, dt, num_steps, out_steps, title):
+@njit
+def Simulate_Attractor(Step_Func, Deriv_Func, Initial_Conditions, params, dt, num_steps, out_steps):
     """
    Simulate and plot the attractor.
     """
     xyz = np.array(Initial_Conditions)
-    results = [xyz]
+    results = np.empty((out_steps + 1, 3))
+    interval = num_steps // out_steps
 
     for i in range(1, num_steps + 1):
         xyz = Step_Func(Deriv_Func, xyz, dt, *params)
 
-        if i % (num_steps // out_steps) == 0 or i == num_steps:
-            results.append(xyz)
+        if i % interval == 0 or i == num_steps:
+            results[i // interval] = xyz
 
-    results = np.array(results)
     #Plot results
-    Plot_Attractor(results, title)
-"""
-    results = np.array(results)
-    Plot_Attractor(results, title)
-    #Calls specified functions and methods
-    xyzs = Integration_Func(Deriv_Func, Initial_Conditions, num_steps, out_steps, dt, *params)
+    return results
+
+#Dictionary
+Calculations = {
+    "Euler" : Euler_Method,
+    "Runge-Kutta" : Runge_Kutta_Method,
+    "Lorenz" : Lorenz_Derivatives,
+    "Rossler" : Rossler_Derivatives
+}
+
+def Plot_Attractor(results, title):
     """
+    A plotting function for attractors
+    """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.plot(*results.T, lw=0.6)
+    ax.set_xlabel("X Axis")
+    ax.set_ylabel("Y Axis")
+    ax.set_zlabel("Z Axis")
+    ax.set_title(title)
+    plt.show()
 
 """
 def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_steps, accuracy):
@@ -171,6 +142,7 @@ def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_
     return print("Best dt within limts:", dt)
 """
 
+@njit
 def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_steps, accuracy):
     """
     Finds the optimal time step (dt) for each integration method for a certain predetermined accuracy
@@ -207,64 +179,64 @@ def Op_dt(Integration_Func, Deriv_Func, Initial_Conditions, params, max_dt, num_
 
     print("Optimal dt was not found in limits")
     return print("Best dt within limits:", dt)
-"""
+
 Op_dt(
-    Integration_Methods["Runge-Kutta"],
-    Lorenz_Derivatives,
+    Calculations["Runge-Kutta"],
+    Calculations["Lorenz"],
     [0., 1., 1.05],
     (0.1, 0.1, 14),
     max_dt=0.01,
     num_steps=1000,
     accuracy = 1e-4
 )
-"""
+
 # Lorenz example from wiki - parameters s=10, r=28, b=2.667
 """
-Simulate_Attractor(
+Plot_Attractor(Simulate_Attractor(
     Integration_Methods["Euler"],
     Lorenz_Derivatives,
     [0., 1., 1.05],
     (10, 28, 2.667),
     dt=10**(-4),
     num_steps=1000000,
-    out_steps = 1000,
+    out_steps = 1000),
     title="Lorenz Attractor (Euler)"
 )
 """
-
-Simulate_Attractor(
-    Integration_Methods["Runge-Kutta"],
-    Lorenz_Derivatives, 
+"""
+Plot_Attractor(Simulate_Attractor(
+    Calculations["Runge-Kutta"],
+    Calculations["Lorenz"],
     [0., 1., 1.05], 
     (10, 28, 2.667), 
     dt=0.0001,
     num_steps=1000000,
-    out_steps=1000,
+    out_steps=10000),
     title="Lorenz Attractor (Runge_Kutta)"
 )
-
+"""
 
 # Rossler example from wiki - paparameters a=0.2, b=0.2, c=5.7
 
 """
-Simulate_Attractor(
+Plot_Attractor(Simulate_Attractor(
     Integration_Methods["Euler"],
     Rossler_Derivatives,
     [0., 1., 1.05],
     (0.1, 0.1, 14),
     dt=0.01,
-    num_steps=10000,
+    num_steps=10000),
     title="Rossler Attractor (Euler)"
 )
 """
 """
-Simulate_Attractor(
+Plot_Attractor(Simulate_Attractor(
     Integration_Methods["Runge-Kutta"],
     Rossler_Derivatives, 
     [0., 1., 1.05], 
     (0.1, 0.1, 14), 
     dt=0.01, 
-    num_steps=10000,
+    num_steps=10000),
     title="Rossler Attractor (Runge_Kutta)"
 )
 """
