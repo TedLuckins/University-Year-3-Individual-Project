@@ -2,9 +2,10 @@ import numpy as np
 import pandas as pd
 import time
 
-start_time = time.time()
-
 from Calculations import Precompute_CalcF,simulate_until_equilibrium, get_equilibrium_V
+
+
+start_time = time.time()
 
 # Save for memristor equalibrium V
 def save_results_to_csv(Vn_values, V_results_min, V_results_max, filename):
