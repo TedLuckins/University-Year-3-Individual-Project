@@ -149,7 +149,7 @@ Calculations = {
     "Memristor": Memristor_Deriv
 }
 def has_reached_equilibrium(V_values, threshold=1e-7):
-    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of time steps
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 1% of time steps
     if (np.max(last_10_percent) - np.min(last_10_percent)) < threshold:
         return True
     else:
