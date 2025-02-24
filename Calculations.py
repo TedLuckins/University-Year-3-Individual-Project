@@ -5,6 +5,9 @@ from numba import njit
 from scipy.integrate import quad
 from scipy.misc import derivative
 from scipy.special import hermite, factorial
+import time
+
+start_time = time.time()
 
 
 # Numerical integration method functions
@@ -93,6 +96,7 @@ def Simulate_System(Deriv_Func, Step_Func, Initial_Conditions, params, dt, num_s
         if i % interval == 0 or i == num_steps:
             results[i // interval, 0] = i * dt
             results[i // interval, 1:] = state
+        print(f"step {i} is completed")
     return results
 
 
@@ -135,19 +139,25 @@ def Op_dt(Deriv_Func, Step_Func, Initial_Conditions, params, max_dt, num_steps, 
     return dt
 
 
-# Checks if the system has reached stable point
-def has_reached_equilibrium(V_values, threshold=1e-4, oscillation_check=False):
-    last_10_percent = V_values[int(len(V_values) * 0.9):]
-    max_change = np.max(np.abs(np.diff(last_10_percent)))
 
-    if not oscillation_check:
-        return max_change < threshold
+# Dictionary
+Calculations = {
+    "Euler": Euler_Method,
+    "Runge-Kutta": Runge_Kutta_Method,
+    "Lorenz": Lorenz_Deriv,
+    "Rossler": Rossler_Deriv,
+    "Memristor": Memristor_Deriv
+}
+def has_reached_equilibrium(V_values, threshold=1e-7):
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of time steps
+    if (np.max(last_10_percent) - np.min(last_10_percent)) < threshold:
+        return True
     else:
-        return len(set(np.round(last_10_percent, 4))) > 3
+        return False
 
 
-def simulate_until_equilibrium(V_n, initial_conditions, max_steps=1000000, dt=0.001):
-    steps_per_check = 10000
+def simulate_until_equilibrium(V_n, R_n, initial_conditions, max_steps, dt):
+    steps_per_check = 1000
     state = np.array(initial_conditions)
     results = []
 
@@ -159,8 +169,7 @@ def simulate_until_equilibrium(V_n, initial_conditions, max_steps=1000000, dt=0.
         if step % steps_per_check == 0:
             results_array = np.array(results)
             V_values = results_array[:, -1]
-
-            if has_reached_equilibrium(V_values, oscillation_check=True):
+            if has_reached_equilibrium(V_values, threshold=1e-7):
                 break
 
     return np.array(results), state
@@ -168,22 +177,24 @@ def simulate_until_equilibrium(V_n, initial_conditions, max_steps=1000000, dt=0.
 
 def get_equilibrium_V(results):
     V_values = results[:, -1]
-    last_10_percent = V_values[int(len(V_values) * 0.9):]
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of data
 
-    if np.std(last_10_percent) < 1e-7:
+    if (np.max(last_10_percent) - np.min(last_10_percent)) < 1e-7:
         return last_10_percent[-1], last_10_percent[-1]
     else:
         return np.min(last_10_percent), np.max(last_10_percent)
 
-# Dictionary
-Calculations = {
-    "Euler": Euler_Method,
-    "Runge-Kutta": Runge_Kutta_Method,
-    "Lorenz": Lorenz_Deriv,
-    "Rossler": Rossler_Deriv,
-    "Memristor": Memristor_Deriv
-}
 
+
+def save_results_to_csv(Vn_values, Rn_values, V_results_min, V_results_max, filename):
+    df = pd.DataFrame({
+        "Vn": Vn_values,
+        "Rn": Rn_values,
+        "V_min": V_results_min,
+        "V_max": V_results_max
+    })
+    df.to_csv(filename, index=False)
+    print(f"Results saved to {filename}")
 # # Call Simulation and Save Functions
 
 # # Calls dt optimisation function
@@ -253,12 +264,12 @@ Z_T = 1.0
 Lambda = 0.13
 l = 0.5
 x_0 = 0.8
-V_n = 1.0
+#V_n = 1.0
 R_n = 5.0
 
 # # Precompute values
-# x_V_range = np.arange(-3, 3.01, 0.01)
-# precomputed_F = Precompute_CalcF(x_V_range, l, Lambda)
+x_V_range = np.arange(-3, 3.01, 0.01)
+precomputed_F = Precompute_CalcF(x_V_range, l, Lambda)
 
 # Forward through Vn
 #Initial_Conditions_Memristor = [0, 0, 1.0, 0] # Vn = 1.0
@@ -278,17 +289,17 @@ R_n = 5.0
 
 Initial_Conditions_Memristor = [0, 0, 1.0, 0]
 
-# Simulates and saves memristor system with Runge-Kutta method
+# # Simulates and saves memristor system with Runge-Kutta method
 # results_memristor = Simulate_System(
 #     Step_Func=Runge_Kutta_Method,
 #     Deriv_Func=lambda state, *params: Memristor_Deriv(state, *params, precomputed_F),
 #     Initial_Conditions=Initial_Conditions_Memristor,
 #     params=(V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0),
-#     dt=0.001,
-#     num_steps=1000000,
+#     dt=0.01,
+#     num_steps=100000,
 #     out_steps=100000
 # )
-# Save_Results(results_memristor, "memristor_simulation_B_Vn=1.csv", "Memristor")
+# Save_Results(results_memristor, "memristor_simulation_Test.csv", "Memristor")
 
 
 # # Conductance Function Simulation for each quantum state
@@ -320,34 +331,41 @@ def save_results_to_csv(Vn_values, V_results_min, V_results_max, filename):
 
 
 
-Vn_values_up = np.arange(0.01, 5.01, 0.01)
-Vn_values_down = np.arange(5, 0.00, -0.01)
-
+Vn_values_up = np.arange(0.01, 1.01, 1.0)
+# Vn_values_down = np.arange(5, 0.00, -0.01)
+#
 V_results_up_min = []
 V_results_up_max = []
-V_results_down_min = []
-V_results_down_max = []
+# V_results_down_min = []
+# V_results_down_max = []
+#
+#
+# current_initial_conditions = Initial_Conditions_Memristor.copy()
+#
+# # Forward simulation
+# for V_n in Vn_values_up:
+#     results, current_initial_conditions = simulate_until_equilibrium(V_n, R_n, current_initial_conditions)
+#     V_min, V_max = get_equilibrium_V(results)
+#     V_results_up_min.append(V_min)
+#     V_results_up_max.append(V_max)
+#     Time = time.time() - start_time
+#
+# save_results_to_csv(Vn_values_up, V_results_up_min, V_results_up_max,
+#                     "memristor_simulation_Test.csv")
+#
+#
+# current_initial_conditions = Initial_Conditions_Memristor.copy()
+#
+# # Backward simulation
+# for V_n in Vn_values_down:
+#     results, current_initial_conditions = simulate_until_equilibrium(V_n, current_initial_conditions)
+#     V_min, V_max = get_equilibrium_V(results)
+#     V_results_down_min.append(V_min)
+#     V_results_down_max.append(V_max)
+#
+# save_results_to_csv(Vn_values_down, V_results_down_min, V_results_down_max,
+#                     "Memristor/Hysteresis/memristor_decreasing_dVn0.01_dt0.001.csv")
 
-
-current_initial_conditions = Initial_Conditions_Memristor.copy()
-
-# Forward simulation
-for V_n in Vn_values_up:
-    results, current_initial_conditions = simulate_until_equilibrium(V_n, current_initial_conditions)
-    V_min, V_max = get_equilibrium_V(results)
-    V_results_up_min.append(V_min)
-    V_results_up_max.append(V_max)
-
-save_results_to_csv(Vn_values_up, V_results_up_min, V_results_up_max, "memristor_increasing_dVn0.01_dt0.001.csv")
-
-
-current_initial_conditions = Initial_Conditions_Memristor.copy()
-
-# Backward simulation
-for V_n in Vn_values_down:
-    results, current_initial_conditions = simulate_until_equilibrium(V_n, current_initial_conditions)
-    V_min, V_max = get_equilibrium_V(results)
-    V_results_down_min.append(V_min)
-    V_results_down_max.append(V_max)
-
-save_results_to_csv(Vn_values_down, V_results_down_min, V_results_down_max, "memristor_decreasing_dVn0.01_dt0.001.csv")
+end_time = time.time()
+total_time = end_time - start_time
+print(f"Simulation completed in {total_time:.2f} seconds.")
