@@ -41,11 +41,24 @@ def Rossler_Deriv(state, a, b, c):
     Z_dot = b + Z * (X - c)
     return np.array([X_dot, Y_dot, Z_dot])
 
-def Memristor_Deriv(state, V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0, precomputed_F):
+def Memristor_Deriv(state, V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0, precomputed_F): #F0_0_dict, F0_1_dict, F1_1_dict):
     X, Y, Z, V = state
-    x_V = x_0 - l * np.sqrt(2) * V
-    x_V_nearest = min(precomputed_F.keys(), key=lambda k: abs(k - x_V))
-    F_vals = precomputed_F[x_V_nearest]
+    x_V = float(round(x_0 - l * np.sqrt(2) * V, 3))
+    Index = int((x_V - (-3))/0.001)
+    if Index < 0:
+        Index = 0
+    elif Index > 6000:
+        Index = 6000
+
+    F_vals = precomputed_F[Index]
+
+
+
+    # F0_0 = F0_0_dict[Index]
+    # F0_1 = F0_1_dict[Index]
+    # F1_1 = F1_1_dict[Index]
+
+
 
     F0_0 = F_vals[(0, 0)]
     F0_1 = F_vals[(0, 1)]
@@ -82,6 +95,34 @@ def Precompute_CalcF(x_V_range, l, Lambda):
             (1, 1): Calc_F(1, 1, x_V, l, Lambda),
         }
     return precomputed_values
+
+def Load_F_Values(filename):
+    df = pd.read_csv(filename)
+    precomputed_F = {}
+
+    for _, row in df.iterrows():
+        Index = int((row["x_V"] + 3)/0.001)
+        precomputed_F[Index] = {
+            (0, 0): row["F0_0"],
+            (0, 1): row["F0_1"],
+            (1, 1): row["F1_1"],
+        }
+    return precomputed_F
+
+# def Load_F_Values(filename):
+#     df = pd.read_csv(filename)
+#     F0_0_dict = {}
+#     F0_1_dict = {}
+#     F1_1_dict = {}
+#
+#     for _, row in df.iterrows():
+#         Index = (row["x_V"] + 3) / 0.001  # Compute the index position
+#         F0_0_dict[int(Index)] = row["F0_0"]
+#         F0_1_dict[int(Index)] = row["F0_1"]
+#         F1_1_dict[int(Index)] = row["F1_1"]
+#
+#     return F0_0_dict, F0_1_dict, F1_1_dict
+
 
 # Simulates a System across time
 def Simulate_System(Deriv_Func, Step_Func, Initial_Conditions, params, dt, num_steps, out_steps):
@@ -149,21 +190,21 @@ Calculations = {
     "Memristor": Memristor_Deriv
 }
 def has_reached_equilibrium(V_values, threshold=1e-7):
-    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 1% of time steps
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of time steps
     if (np.max(last_10_percent) - np.min(last_10_percent)) < threshold:
         return True
     else:
         return False
 
 
-def simulate_until_equilibrium(V_n, R_n, initial_conditions, max_steps, dt):
+def simulate_until_equilibrium(V_n, R_n, initial_conditions, max_steps, dt, precomputed_F): #F0_0_dict, F0_1_dict, F1_1_dict):
     steps_per_check = 1000
     state = np.array(initial_conditions)
     results = []
 
     for step in range(1, max_steps + 1):
         state = Runge_Kutta_Method(Memristor_Deriv, state, dt, V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0,
-                                   precomputed_F)
+                                   precomputed_F) #F0_0_dict, F0_1_dict, F1_1_dict)
         results.append([step * dt] + list(state))
 
         if step % steps_per_check == 0:
@@ -195,66 +236,6 @@ def save_results_to_csv(Vn_values, Rn_values, V_results_min, V_results_max, file
     })
     df.to_csv(filename, index=False)
     print(f"Results saved to {filename}")
-# # Call Simulation and Save Functions
-
-# # Calls dt optimisation function
-# optimal_dt = Op_dt(
-#     Calculations["Runge-Kutta"],
-#     Calculations["Lorenz"],
-#     [0., 1., 1.05],
-#     (10, 28, 2.667),
-#     max_dt=0.01,
-#     num_steps=1000,
-#     accuracy=1e-4
-# )
-
-# # Simulates and saves Lorenz attractor with Euler method
-# results = Simulate_System(
-#     Calculations["Lorenz"],
-#     Calculations["Euler"],
-#     [0., 1., 1.05],
-#     (10, 28, 2.667),
-#     dt=0.0001,
-#     num_steps=1000000,
-#     out_steps=10000
-# )
-# Save_Results(results, "lorenz_attractor_euler.csv", "Lorenz")
-#
-# # Simulates and saves Lorenz attractor with Runge-Kutta method
-# results = Simulate_System(
-#     Calculations["Lorenz"],
-#     Calculations["Runge-Kutta"],
-#     [0., 1., 1.05],
-#     (10, 28, 2.667),
-#     dt=0.0001,
-#     num_steps=1000000,
-#     out_steps=10000
-# )
-# Save_Results(results,"lorenz_attractor_runge-kutta.csv", "Lorenz")
-
-# # Simulates and saves Rossler attractor with Euler method
-# results = Simulate_System(
-#     Calculations["Rossler"],
-#     Calculations["Euler"],
-#     [0., 1., 1.05],
-#     (0.1, 0.1, 14),
-#     dt=0.01,
-#     num_steps=10000,
-#     out_steps=10000
-# )
-# Save_Results(results,"rossler_attractor_euler.csv","Rossler")
-#
-# # Simulates and saves Rossler attractor with Rung-Kutta method
-# results = Simulate_System(
-#     Calculations["Rossler"],
-#     Calculations["Runge-Kutta"],
-#     [0., 1., 1.05],
-#     (0.1, 0.1, 14),
-#     dt=0.01,
-#     num_steps=10000,
-#     out_steps=10000
-# )
-# Save_Results(results,"rossler_attractor_runge_kutta.csv","Rossler")
 
 # Parameters for Memristor System
 alpha = 1.0
@@ -264,57 +245,59 @@ Z_T = 1.0
 Lambda = 0.13
 l = 0.5
 x_0 = 0.8
-#V_n = 1.0
+V_n = 1.0
 R_n = 5.0
 
 # # Precompute values
-x_V_range = np.arange(-3, 3.01, 0.01)
-precomputed_F = Precompute_CalcF(x_V_range, l, Lambda)
+# x_V_range = np.arange(-3, 3.01, 0.01)
+# precomputed_F = Precompute_CalcF(x_V_range, l, Lambda)
+#F0_0_dict, F0_1_dict, F1_1_dict = Load_F_Values("Memristor/Conductance_Functions/Conductance_Functions.csv")
 
-# Forward through Vn
-#Initial_Conditions_Memristor = [0, 0, 1.0, 0] # Vn = 1.0
-#Initial_Conditions_Memristor = [0.422911721, -0.02626182, 0.230480932, 0.479448137] # Vn = 2.0
-#Initial_Conditions_Memristor = [0.174542556, 0.326727203, 0.173154776, 0.827412143] # Vn = 3.0
-#Initial_Conditions_Memristor = [-0.424124651, 0.190172592, 0.690308487, 1.073813632] # Vn = 4.0
-#Initial_Conditions_Memristor = [9.06E-16, -6.34E-14, 0.999999999999444, 3.999733589] # Forward: Vn = 5.0
-
-# Backward through Vn
-#Initial_Conditions_Memristor = [3.80570226763632E-16, -2.66399158734637E-14, 0.999999999999444, 4.99999858258624] # Forward: Vn = 5.0
-#Initial_Conditions_Memristor = [3.84194705113673E-16, -2.68936293579729E-14, 0.999999999999444, 4.99999858258624] # Vn = 4.0
-#Initial_Conditions_Memristor = [2.17468701007642E-16, -1.52228090705507E-14, 0.999999999999444, 3.99973358904326] # Vn = 3.0
-#Initial_Conditions_Memristor = [9.05743531569221E-16, -6.34072284232692E-14, 0.999999999999444, 2.95258673229717] # Vn = 2.0
-#Initial_Conditions_Memristor = [0.323472997577606, 0.182707906350382, 0.171117250812354, 0.844043980921247] # Forward: Vn = 1.0
-
-
+precomputed_F = Load_F_Values("Memristor/Conductance_Functions/Conductance_Functions.csv")
 
 Initial_Conditions_Memristor = [0, 0, 1.0, 0]
+
+current_initial_conditions = Initial_Conditions_Memristor.copy()
+
+dt = 0.01
+max_steps = 100000
 
 # # Simulates and saves memristor system with Runge-Kutta method
 # results_memristor = Simulate_System(
 #     Step_Func=Runge_Kutta_Method,
-#     Deriv_Func=lambda state, *params: Memristor_Deriv(state, *params, precomputed_F),
+#     Deriv_Func=lambda state, *params: Memristor_Deriv(state, *params, ),
 #     Initial_Conditions=Initial_Conditions_Memristor,
 #     params=(V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0),
 #     dt=0.01,
 #     num_steps=100000,
 #     out_steps=100000
 # )
-# Save_Results(results_memristor, "memristor_simulation_Test.csv", "Memristor")
+# Save_Results(results_memristor, "memristor_simulation_TestN.csv", "Memristor")
 
+# results_memristor, state = simulate_until_equilibrium(
+#     V_n, R_n, current_initial_conditions, max_steps, dt, F0_0_dict, F0_1_dict, F1_1_dict)
+
+# results_memristor, state = simulate_until_equilibrium(
+#     V_n, R_n, current_initial_conditions, max_steps, dt, precomputed_F)
+#
+# Save_Results(results_memristor, "memristor_simulation_TestN.csv", "Memristor")
 
 # # Conductance Function Simulation for each quantum state
-# x_V_Range = np.arange(-3, 3.01, 0.01)
+# x_V_Range = np.arange(-3, 3.01, 0.001)
 # Lambda = 0.13
 # l = 0.5
 # results_conductance_function = []
 # for x_V in x_V_Range:
+#     x_V = round(x_V, 4)
 #     F0_0 = Calc_F(0, 0, x_V = x_V, l = l, Lambda = Lambda)
 #     F0_1 = Calc_F(0, 1, x_V = x_V, l = l, Lambda = Lambda)
 #     F1_1 = Calc_F(1, 1, x_V = x_V, l = l, Lambda = Lambda)
 #     results_conductance_function.append([x_V, F0_0, F0_1, F1_1])
+#     Time = time.time() - start_time
+#     print(f"Current time {Time}")
 #
 # results_conductance_function = np.array(results_conductance_function)
-# Save_Results(results_conductance_function, "Conductance_Functions.csv", "Conductance Functions")
+# Save_Results(results_conductance_function, "Memristor/Conductance_Functions/Conductance_Functions.csv", "Conductance Functions")
 
 
 
@@ -331,40 +314,7 @@ def save_results_to_csv(Vn_values, V_results_min, V_results_max, filename):
 
 
 
-Vn_values_up = np.arange(0.01, 1.01, 1.0)
-# Vn_values_down = np.arange(5, 0.00, -0.01)
-#
-V_results_up_min = []
-V_results_up_max = []
-# V_results_down_min = []
-# V_results_down_max = []
-#
-#
-# current_initial_conditions = Initial_Conditions_Memristor.copy()
-#
-# # Forward simulation
-# for V_n in Vn_values_up:
-#     results, current_initial_conditions = simulate_until_equilibrium(V_n, R_n, current_initial_conditions)
-#     V_min, V_max = get_equilibrium_V(results)
-#     V_results_up_min.append(V_min)
-#     V_results_up_max.append(V_max)
-#     Time = time.time() - start_time
-#
-# save_results_to_csv(Vn_values_up, V_results_up_min, V_results_up_max,
-#                     "memristor_simulation_Test.csv")
-#
-#
-# current_initial_conditions = Initial_Conditions_Memristor.copy()
-#
-# # Backward simulation
-# for V_n in Vn_values_down:
-#     results, current_initial_conditions = simulate_until_equilibrium(V_n, current_initial_conditions)
-#     V_min, V_max = get_equilibrium_V(results)
-#     V_results_down_min.append(V_min)
-#     V_results_down_max.append(V_max)
-#
-# save_results_to_csv(Vn_values_down, V_results_down_min, V_results_down_max,
-#                     "Memristor/Hysteresis/memristor_decreasing_dVn0.01_dt0.001.csv")
+
 
 end_time = time.time()
 total_time = end_time - start_time
