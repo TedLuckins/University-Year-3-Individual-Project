@@ -5,7 +5,6 @@ import time
 start_time = time.time()
 
 from Calculations import simulate_until_equilibrium, get_equilibrium_V, Load_F_Values
-#from Test import Precompute_CalcF,simulate_until_equilibrium, get_equilibrium_V, Load_F_Values
 
 # Save for memristor equalibrium V
 def save_results_to_csv(Vn_values, V_results_min, V_results_max, filename):
@@ -76,10 +75,3 @@ save_results_to_csv(Vn_values_down, V_results_down_min, V_results_down_max,
 end_time = time.time()
 total_time = end_time - start_time
 print(f"Simulation completed in {total_time:.2f} seconds.")
-
-
-df = pd.read_csv("Memristor/Conductance_Functions/Conductance_Functions.csv")
-if 0.8 in df["x_V"].round(3).values:
-    print("x_V = 0.8 is in the file")
-else:
-    print("x_V = 0.8 is missing from the file!")
