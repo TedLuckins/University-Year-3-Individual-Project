@@ -1,4 +1,10 @@
-def apply_window(signal, window_type):
+import numpy as np
+import pandas as pd
+from scipy.signal import welch
+import matplotlib.pyplot as plt
+
+
+def Windows(signal, window_type):
     if window_type == "hann":
         return np.hanning(len(signal)) * signal
     elif window_type == "hamming":
@@ -7,7 +13,7 @@ def apply_window(signal, window_type):
         return signal
 
 
-def compute_periodogram_psd(signal, sample_rate):
+def Periodogram_PSD(signal, sample_rate):
     N = len(signal)
     freqs = np.fft.rfftfreq(N, 1 / sample_rate)
     fft_values = np.fft.rfft(signal)
@@ -16,16 +22,16 @@ def compute_periodogram_psd(signal, sample_rate):
     return freqs, psd
 
 
-def average_periodogram(signal, sample_rate, num_averages, window_type):
+def Average_Periodogram(signal, sample_rate, num_averages, window_type):
     N = len(signal)
     psd_sum = np.zeros(N // 2 + 1)
 
     for _ in range(num_averages):
         signal_no_dc = signal - np.mean(signal)
 
-        windowed_signal = apply_window(signal_no_dc, window_type)
+        windowed_signal = Windows(signal_no_dc, window_type)
 
-        freqs, psd = compute_periodogram_psd(windowed_signal, sample_rate)
+        freqs, psd = Periodogram_PSD(windowed_signal, sample_rate)
 
         psd_sum += psd
 
@@ -45,7 +51,7 @@ def Calculate_PSD(filename, output_csv, data_fraction, num_averages, window_type
     dt = np.mean(np.diff(time))
     fs = 1.0 / dt
 
-    f, psd_avg = average_periodogram(voltage, fs, num_averages, window_type)
+    f, psd_avg = Average_Periodogram(voltage, fs, num_averages, window_type)
 
     omega = 2 * np.pi * f
 
@@ -84,6 +90,6 @@ def plot_normalised_psd(csv_file, title="Normalised Power Spectral Density"):
     plt.show()
 
 
-Calculate_PSD("Simulation_Test_dt=0.0001.csv", "PSD_Test_dt=0.0001_avg=100.csv", data_fraction=1.0, num_averages=100, window_type="Hann")
+Calculate_PSD("Simulation_Test_dt=0.0001.csv", "PSD_Test_dt=0.0001_avg=100.csv", data_fraction=1.0, num_averages=10, window_type="Hann")
 
 plot_normalised_psd("PSD_Test_dt=0.0001_avg=100.csv", "Normalised Power Spectral Density")
