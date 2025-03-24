@@ -7,9 +7,6 @@ from scipy.misc import derivative
 from scipy.special import hermite, factorial
 
 
-
-
-
 # Numerical integration method functions
 #@njit
 def Euler_Method(Deriv_Func, state, dt, *params):
@@ -43,7 +40,7 @@ def Rossler_Deriv(state, a, b, c):
 
 def Memristor_Deriv(state, V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0, precomputed_F):
     X, Y, Z, V = state
-    x_V = round(x_0 - l * np.sqrt(2) * V, 3)
+    x_V = x_0 - l * np.sqrt(2) * V
     if x_V < -3:
         F_vals = precomputed_F[-3]
         F0_0 = F_vals[(0, 0)]
@@ -55,14 +52,14 @@ def Memristor_Deriv(state, V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_0, p
         F0_1 = F_vals[(0, 1)]
         F1_1 = F_vals[(1, 1)]
     else:
-        # Interpolates
         x_V1 = round(np.floor(x_V / 0.001) * 0.001, 3)
         x_V2 = round(x_V1 + 0.001, 3)
         F_vals1 = precomputed_F[x_V1]
         F_vals2 = precomputed_F[x_V2]
-        F0_0 = ((F_vals2[(0, 0)]-F_vals1[(0, 0)])/0.001) * x_V
-        F0_1 = ((F_vals2[(0, 1)]-F_vals1[(0, 1)])/0.001) * x_V
-        F1_1 = ((F_vals2[(1, 1)]-F_vals1[(1, 1)])/0.001) * x_V
+        F0_0 = F_vals1[(0, 0)] + ((F_vals2[(0, 0)] - F_vals1[(0, 0)]) / 0.001) * (x_V - x_V1)
+        F0_1 = F_vals1[(0, 1)] + ((F_vals2[(0, 1)] - F_vals1[(0, 1)]) / 0.001) * (x_V - x_V1)
+        F1_1 = F_vals1[(1, 1)] + ((F_vals2[(1, 1)] - F_vals1[(1, 1)]) / 0.001) * (x_V - x_V1)
+        print(x_V)
 
 
 
@@ -167,6 +164,7 @@ def Op_dt(Deriv_Func, Step_Func, Initial_Conditions, params, max_dt, num_steps, 
     return dt
 
 
+
 # Dictionary
 Calculations = {
     "Euler": Euler_Method,
@@ -176,7 +174,7 @@ Calculations = {
     "Memristor": Memristor_Deriv
 }
 def has_reached_equilibrium(V_values, threshold=1e-7):
-    last_10_percent = V_values[int(len(V_values) * 0.99):]
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of time steps
     if (np.max(last_10_percent) - np.min(last_10_percent)) < threshold:
         return True
     else:
@@ -204,7 +202,7 @@ def simulate_until_equilibrium(V_n, R_n, Z_T, alpha, Omega, Gamma, l, Lambda, x_
 
 def get_equilibrium_V(results):
     V_values = results[:, -1]
-    last_10_percent = V_values[int(len(V_values) * 0.99):]
+    last_10_percent = V_values[int(len(V_values) * 0.99):]  # Last 10% of data
 
     if (np.max(last_10_percent) - np.min(last_10_percent)) < 1e-8:
         return last_10_percent[-1], last_10_percent[-1]
