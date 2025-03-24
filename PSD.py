@@ -68,8 +68,6 @@ def Calculate_PSD(filename, output_csv, data_fraction, num_averages, window_type
     df_psd = pd.DataFrame(data)
     df_psd.to_csv(output_csv, index=False)
 
-    print(f"PSD data (real and normalised power) has been saved to {output_csv}")
-
 
 def plot_normalised_psd(csv_file, title="Normalised Power Spectral Density"):
     df = pd.read_csv(csv_file)
@@ -90,6 +88,6 @@ def plot_normalised_psd(csv_file, title="Normalised Power Spectral Density"):
     plt.show()
 
 
-Calculate_PSD("Simulation_Test_dt=0.0001.csv", "PSD_Test_dt=0.0001_avg=100.csv", data_fraction=1.0, num_averages=10, window_type="Hann")
+Calculate_PSD("Simulation_Test_dt=0.0001.csv", "PSD_Test_dt=0.0001_avg=100.csv", data_fraction=1.0, num_averages=100, window_type="Hann")
 
 plot_normalised_psd("PSD_Test_dt=0.0001_avg=100.csv", "Normalised Power Spectral Density")
