@@ -1,1 +1,8 @@
-Initial Code History can be seen in my repository: University-Year-3-Individual-Project-initial
+# Investigation-Into-Neuromorphic-Computing-Device
+
+This Repository contains my research into the non-linear dynamics in an artificial neuron exhibited by a quantum component with memristive characteristics
+---
+
+
+
+
